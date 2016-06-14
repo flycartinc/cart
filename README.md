@@ -3,6 +3,8 @@
 
 Tool for managing the cart in session with encrypted cookie for preserve the cart items.
 
+some of the methods on cart library are,
+
 **1. Add Item** 
 
 **2. Update Item**
@@ -15,7 +17,7 @@ Tool for managing the cart in session with encrypted cookie for preserve the car
 
 **6. Calculate Totals**
 
-These all are some of the methods on cart library.
+
 
 
 **Sample Code**
