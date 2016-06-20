@@ -1,8 +1,8 @@
 <?php
-namespace StorePress\library;
+namespace shankarbala33\cart;
 
 use Illuminate\Database\Eloquent\Collection;
-use StorePress\Helper\Util;
+use shankarbala33\snippets\Helper\General;
 
 /**
  * Class Cart
