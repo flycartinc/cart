@@ -11,7 +11,8 @@
 
   "require": {
     "php": "^5.5.9|^7.0",
-    "illuminate/session": "^5.2"
+    "illuminate/session": "^5.2",
+    "shankarbala33/snippets": ">= 1.0"
   },
 
   "autoload": {
