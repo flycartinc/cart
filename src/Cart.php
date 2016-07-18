@@ -1,5 +1,5 @@
 <?php
-namespace flycartinc\cart;
+namespace Flycartinc\Cart;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Encryption\Encrypter;
