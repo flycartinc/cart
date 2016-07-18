@@ -76,26 +76,25 @@ class Cart
             $items = self::encrypt(json_encode($items));
             /** To Set the Encoded Content to Fresh Cookie */
             setcookie('cart_items', $items, time() + (3600 * 24 * 2), "/");
-            dd(self::decrypt($_COOKIE['cart_items']));
         }
     }
 
     /**
      * @param $item
+     * @return array
      */
     public static function add($item)
     {
-//        foreach($items as $item )
         $cart_items = self::getItems();
         if (!empty($cart_items)) {
             if (self::checkIsExist($item)) self::updateStock($item['id'], $item['quantity']);
         }
+        if (empty($item)) return array();
 
-        //TODO : Set the "row_id" based on [Pro_id + variant_id + attributes...]
-
-        $item['row_id'] = hash('md5', $item['id']);
-        $cart_items[$item['id']] = $item;
+        $item['row_id'] = hash('md5', $item['pro_id'] . '_' . $item['var_id']);
+        $cart_items[$item['product_id']] = $item;
         self::setItems($cart_items);
+        return true;
     }
 
     /**
@@ -163,6 +162,7 @@ class Cart
     public static function destroy()
     {
         Session()->remove('cart_items');
+        setcookie('cart_item', '', -3600);
     }
 
     /**
@@ -199,6 +199,8 @@ class Cart
     public static function encrypt($string)
     {
         $encoder = new Encrypter(self::$enc_key);
+        /** If No String, then return Array */
+        if (!$string) return array();
         return $encoder->encrypt($string);
     }
 
@@ -211,6 +213,8 @@ class Cart
     public static function decrypt($coded_string)
     {
         $decode = new Encrypter(self::$enc_key);
+        /** If No Encoded-String, then return Array */
+        if (!$coded_string) return array();
         return $decode->decrypt($coded_string);
     }
 
