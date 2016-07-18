@@ -17,6 +17,6 @@
   },
 
   "autoload": {
-    "psr-4": { "flycartinc\\cart\\": "src" }
+    "psr-4": { "Flycartinc\\Cart\\": "src" }
   }
 }
