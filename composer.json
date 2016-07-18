@@ -4,10 +4,11 @@
   "description": "Complete Cart Library with Session Library",
   "keywords": ["Cart","Session Cart","Cart Library"],
   "license": "MIT",
-  "authors": [{
+  "authors": [
+     {
     "name" : "Shankar Thiyagaraajan",
     "email" : "shankarthiyagaraajan@gmail.com"
-  }
+     }
   ],
 
   "require": {
@@ -17,6 +18,6 @@
   },
 
   "autoload": {
-    "psr-4": { "Flycartinc\\Cart\\": "src" }
+    "psr-4": { "Flycartinc\\Cart\\": "src/" }
   }
 }
