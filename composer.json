@@ -5,7 +5,8 @@
   "keywords": ["Cart","Session Cart","Cart Library"],
   "license": "MIT",
   "authors": [{
-    "name" : "Shankar Thiyagaraajan"
+    "name" : "Shankar Thiyagaraajan",
+    "email" : "shankarthiyagaraajan@gmail.com"
   }
   ],
 
