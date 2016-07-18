@@ -2,7 +2,7 @@
 namespace shankarbala33\cart;
 
 use Illuminate\Database\Eloquent\Collection;
-use shankarbala33\snippets\Helper\General;
+use Illuminate\Encryption\Encrypter;
 
 /**
  * Class Cart
@@ -10,6 +10,8 @@ use shankarbala33\snippets\Helper\General;
  */
 class Cart
 {
+
+    protected static $enc_key = '!@#$%^OLKINU1234';
 
     /**
      * @var array of Cart Items
@@ -36,7 +38,7 @@ class Cart
             $cart_items = Session()->get('cart_items');
 
         } elseif (!empty($_COOKIE['cart_items'])) {
-            $cart_items = json_decode(Util::decrypt($_COOKIE['cart_items']), true);
+            $cart_items = json_decode(self::decrypt($_COOKIE['cart_items']), true);
         } else {
             return array();
         }
@@ -56,7 +58,8 @@ class Cart
      * Method to get the cart items as eloquent collections
      */
 
-    public static function items() {
+    public static function items()
+    {
         return self::getItems(true);
     }
 
@@ -70,10 +73,10 @@ class Cart
             /** To Remove the Existing Cookie */
             //setcookie('cart_items', '', -3600);
 
-            $items = Util::encrypt(json_encode($items));
+            $items = self::encrypt(json_encode($items));
             /** To Set the Encoded Content to Fresh Cookie */
             setcookie('cart_items', $items, time() + (3600 * 24 * 2), "/");
-            dd(Util::decrypt($_COOKIE['cart_items']));
+            dd(self::decrypt($_COOKIE['cart_items']));
         }
     }
 
@@ -184,6 +187,31 @@ class Cart
         if (empty($cart_items)) return false;
         $isExist = $cart_items->where('id', $item['id'])->count();
         return ($isExist > 0) ? true : false;
+    }
+
+
+    /**
+     * To Encrypt the given data with Encryption package by Secret Key
+     *
+     * @param string $string Raw Data
+     * @return string Encoded Data
+     */
+    public static function encrypt($string)
+    {
+        $encoder = new Encrypter(self::$enc_key);
+        return $encoder->encrypt($string);
+    }
+
+    /**
+     * To Decrypt the given Crypt data by Secret Key
+     *
+     * @param string $coded_string Encoded Data
+     * @return string Raw Data
+     */
+    public static function decrypt($coded_string)
+    {
+        $decode = new Encrypter(self::$enc_key);
+        return $decode->decrypt($coded_string);
     }
 
 }
