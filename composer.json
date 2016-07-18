@@ -1,5 +1,5 @@
 {
-  "name": "shankarbala33/cart",
+  "name": "flycartinc/cart",
   "type": "library",
   "description": "Complete Cart Library with Session Library",
   "keywords": ["Cart","Session Cart","Cart Library"],
@@ -16,6 +16,6 @@
   },
 
   "autoload": {
-    "psr-4": { "shankarbala33\\cart\\": "src" }
+    "psr-4": { "flycartinc\\cart\\": "src" }
   }
 }
