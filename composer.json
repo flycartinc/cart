@@ -13,8 +13,7 @@
 
   "require": {
     "php": "^5.5.9|^7.0",
-    "illuminate/session": "^5.2",
-    "illuminate/encryption" : "^5.2"
+    "illuminate/session": "^5.2"
   },
 
   "autoload": {
