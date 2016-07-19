@@ -2,12 +2,13 @@
 namespace Flycartinc\Cart;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Cart
  * @package StorePress\library
  */
-class Cart
+class Cart extends Model
 {
 
     /**
@@ -66,20 +67,20 @@ class Cart
      * @param $item
      * @return array
      */
-    public static function add($item)
+    public static function add($item, $isCart = false)
     {
         $item['row_id'] = hash('md5', $item['pro_id'] . '_' . $item['var_id']);
         $cart_items = self::getItems();
-        if (!empty($cart_items)) {
-            echo 'EXIST';
-            if (self::checkIsExist($item)) {
+        if (!empty($cart_items) and self::checkIsExist($item)) {
+            if (!$isCart) {
                 $cart_items[$item['row_id']]['qty'] = self::updateStock($item['row_id'], $item['qty']);
+            } else {
+                $cart_items[$item['row_id']] = $item;
             }
         } else {
             $cart_items[$item['row_id']] = $item;
         }
         if (empty($item)) return array();
-
         self::setItems($cart_items);
         return true;
     }
@@ -93,14 +94,15 @@ class Cart
     {
         $cart_items = self::getItems();
         if (empty($cart_items)) return false;
-        return (int)$cart_items[$row_id]['qty'] + (int)$quantity;
+        $result = (int)$cart_items[$row_id]['qty'] + (int)$quantity;
+        return $result;
     }
 
     /**
      * @param array $data
      * @return bool
      */
-    public static function update($data = array())
+    public static function update_cart($data = array())
     {
         $cart_items = self::getItems();
         if (empty($cart_items)) return false;
@@ -117,15 +119,17 @@ class Cart
     public static function search($field, $value, $eloquent = false)
     {
         if (empty($field) OR empty($value)) return array();
+
         $cart_items = self::getItems(true);
         if (empty($cart_items)) return false;
-        $result = $cart_items->where($field, $value)->first();
-        if ($eloquent) {
-            return (object)$result;
-        } else {
-            return $result;
+        $result = $cart_items->where($field, $value);
+        if ($result and !empty($result)) {
+            if ($eloquent) {
+                return (object)$result;
+            } else {
+                return $result->toArray();
+            }
         }
-
     }
 
     /**
@@ -145,7 +149,7 @@ class Cart
     /**
      *
      */
-    public static function destroy()
+    public static function destroy_cart()
     {
         /** Remove On Session */
         if (Session()->has('cart_items')) {
