@@ -2,7 +2,6 @@
 namespace Flycartinc\Cart;
 
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Encryption\Encrypter;
 
 /**
  * Class Cart
@@ -10,8 +9,6 @@ use Illuminate\Encryption\Encrypter;
  */
 class Cart
 {
-
-    protected static $enc_key = '!@#$%^OLKINU1234';
 
     /**
      * @var array of Cart Items
@@ -34,15 +31,7 @@ class Cart
      */
     public static function getItems($isEloquent = false)
     {
-        if (Session()->has('cart_items')) {
-            $cart_items = Session()->get('cart_items');
-
-        } elseif (!empty($_COOKIE['cart_items'])) {
-            $cart_items = json_decode(self::decrypt($_COOKIE['cart_items']), true);
-        } else {
-            return array();
-        }
-
+        $cart_items = Session()->get('cart_items');
         if ($isEloquent) {
             self::$cart_items = new Collection();
             foreach ($cart_items as $item) {
@@ -70,12 +59,6 @@ class Cart
     {
         if (is_array($items) OR is_object($items)) {
             Session()->set('cart_items', $items);
-            /** To Remove the Existing Cookie */
-            //setcookie('cart_items', '', -3600);
-
-            $items = self::encrypt(json_encode($items));
-            /** To Set the Encoded Content to Fresh Cookie */
-            setcookie('cart_items', $items, time() + (3600 * 24 * 2), "/");
         }
     }
 
@@ -85,29 +68,32 @@ class Cart
      */
     public static function add($item)
     {
+        $item['row_id'] = hash('md5', $item['pro_id'] . '_' . $item['var_id']);
         $cart_items = self::getItems();
         if (!empty($cart_items)) {
-            if (self::checkIsExist($item)) self::updateStock($item['id'], $item['quantity']);
+            echo 'EXIST';
+            if (self::checkIsExist($item)) {
+                $cart_items[$item['row_id']]['qty'] = self::updateStock($item['row_id'], $item['qty']);
+            }
+        } else {
+            $cart_items[$item['row_id']] = $item;
         }
         if (empty($item)) return array();
 
-        $item['row_id'] = hash('md5', $item['pro_id'] . '_' . $item['var_id']);
-        $cart_items[$item['product_id']] = $item;
         self::setItems($cart_items);
         return true;
     }
 
     /**
-     * @param $id
+     * @param $row_id
      * @param $quantity
      * @return bool
      */
-    public static function updateStock($id, $quantity)
+    public static function updateStock($row_id, $quantity)
     {
         $cart_items = self::getItems();
         if (empty($cart_items)) return false;
-        $cart_items[$id]['quantity'] = (int)$cart_items[$id]['quantity'] + $quantity;
-        self::setItems($cart_items);
+        return (int)$cart_items[$row_id]['qty'] + (int)$quantity;
     }
 
     /**
@@ -118,7 +104,7 @@ class Cart
     {
         $cart_items = self::getItems();
         if (empty($cart_items)) return false;
-        $cart_items[$data['id']][$data['field']] = $data['value'];
+        $cart_items[$data['row_id']][$data['field']] = $data['value'];
         self::setItems($cart_items);
     }
 
@@ -161,8 +147,21 @@ class Cart
      */
     public static function destroy()
     {
-        Session()->remove('cart_items');
-        setcookie('cart_item', '', -3600);
+        /** Remove On Session */
+        if (Session()->has('cart_items')) {
+            Session()->remove('cart_items');
+        }
+
+        /** To Remove the Existing Cookie */
+        if (isset($_COOKIE['cart_items'])) {
+            setcookie('cart_items', '', time() - 3600, "/");
+        }
+
+        /** Removing on User Meta */
+        if (is_user_logged_in()) {
+            $id = get_current_user_id();
+            update_user_meta($id, 'cart_items', '');
+        }
     }
 
     /**
@@ -185,37 +184,8 @@ class Cart
     {
         $cart_items = self::getItems(true);
         if (empty($cart_items)) return false;
-        $isExist = $cart_items->where('id', $item['id'])->count();
+        $isExist = $cart_items->where('product_id', $item['product_id'])->count();
         return ($isExist > 0) ? true : false;
-    }
-
-
-    /**
-     * To Encrypt the given data with Encryption package by Secret Key
-     *
-     * @param string $string Raw Data
-     * @return string Encoded Data
-     */
-    public static function encrypt($string)
-    {
-        $encoder = new Encrypter(self::$enc_key);
-        /** If No String, then return Array */
-        if (!$string) return array();
-        return $encoder->encrypt($string);
-    }
-
-    /**
-     * To Decrypt the given Crypt data by Secret Key
-     *
-     * @param string $coded_string Encoded Data
-     * @return string Raw Data
-     */
-    public static function decrypt($coded_string)
-    {
-        $decode = new Encrypter(self::$enc_key);
-        /** If No Encoded-String, then return Array */
-        if (!$coded_string) return array();
-        return $decode->decrypt($coded_string);
     }
 
 }
