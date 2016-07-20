@@ -2,7 +2,7 @@
   "name": "flycartinc/cart",
   "type": "library",
   "description": "Complete Cart Library with Session Library",
-  "keywords": ["Cart","Session Cart","Cart Library"],
+  "keywords": ["Cart","Session Cart","Cart Library","Cart Persistence"],
   "license": "MIT",
   "authors": [
      {
@@ -13,7 +13,9 @@
 
   "require": {
     "php": "^5.5.9|^7.0",
-    "illuminate/session": "^5.2"
+    "illuminate/session": "^5.2",
+    "illuminate/encryption" : "^5.2",
+    "jgrossi/corcel" : "1.0.3"
   },
 
   "autoload": {
