@@ -128,7 +128,7 @@ class Cart extends Model
         $cart_items = self::getItems();
         if (!empty($cart_items) and self::checkIsExist($item)) {
             if (!$isCart) {
-                $cart_items[$item['row_id']]['qty'] = self::updateStock($item['row_id'], $item['qty']);
+                $cart_items[$item['row_id']]['quantity'] = self::updateStock($item['row_id'], $item['quantity']);
             } else {
                 $cart_items[$item['row_id']] = $item;
             }
@@ -151,7 +151,7 @@ class Cart extends Model
     {
         $cart_items = self::getItems();
         if (empty($cart_items)) return false;
-        $result = (int)$cart_items[$row_id]['qty'] + (int)$quantity;
+        $result = (int)$cart_items[$row_id]['quantity'] + (int)$quantity;
         return $result;
     }
 
