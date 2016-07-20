@@ -3,6 +3,8 @@ namespace Flycartinc\Cart;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Encryption\Encrypter;
+use Corcel\User;
 
 /**
  * Class Cart
@@ -16,12 +18,63 @@ class Cart extends Model
      */
     protected static $cart_items;
 
+    protected static $enc_key = '!@#$%^OLKINU1234';
+
     /**
      * Cart constructor.
      */
     public function __construct()
     {
-        //
+        $this->initCart();
+    }
+
+    /**
+     * To Add Session Cart item to Database
+     */
+    public static function initCart()
+    {
+        if (!Session()->has('cart_items')) {
+
+            /** CASE 1: User login based restore */
+            /** Initially verify the User logged in or not */
+            if (is_user_logged_in()) {
+
+                /** Attempt to retrieve the User ID */
+                $id = get_current_user_id();
+
+                /** Get Corresponding User's Cart item meta */
+                $content = User::find($id)->meta('cart_items')->get()->first();
+
+                /** If User Meta have cart data's, then check Cookie */
+                if (!$content) {
+
+                    /** If Cookie Hold cart data's, then restore with that */
+                    if (isset($_COOKIE['cart_items'])) {
+
+                        /** Cookie were stored in Encrypted form in generally */
+                        $content = json_decode(self::decrypt($_COOKIE['cart_items']), true);
+                    } else {
+                        $content = array();
+                    }
+                } else {
+                    $content = json_decode(self::decrypt($content), true);
+                }
+
+                /** CASE 2: User cookie based restore */
+
+                /** If Cookie is Not Empty and User Not Logged In */
+            } else if (!empty($_COOKIE['cart_items'])) {
+
+                /** Get Active Cookie's Cart items */
+                $content = json_decode(self::decrypt($_COOKIE['cart_items']), true);
+            } else {
+
+                $content = array();
+            }
+
+            /** Decrypt the Cart item and Update Cart Session */
+            Session()->set('cart_items', $content);
+        }
     }
 
     /**
@@ -32,6 +85,8 @@ class Cart extends Model
      */
     public static function getItems($isEloquent = false)
     {
+        if (!Session()->has('cart_items')) self::initCart();
+
         $cart_items = Session()->get('cart_items');
         if ($isEloquent) {
             self::$cart_items = new Collection();
@@ -82,7 +137,9 @@ class Cart extends Model
         }
         if (empty($item)) return array();
         self::setItems($cart_items);
-        return true;
+
+        /** Updating Cart status make sure the Stability  */
+        self::updateCartStatus();
     }
 
     /**
@@ -190,6 +247,57 @@ class Cart extends Model
         if (empty($cart_items)) return false;
         $isExist = $cart_items->where('product_id', $item['product_id'])->count();
         return ($isExist > 0) ? true : false;
+    }
+
+    /**
+     * To Encrypt the given data with Encryption package by Secret Key
+     *
+     * @param string $string Raw Data
+     * @return string Encoded Data
+     */
+    public static function encrypt($string)
+    {
+        $encoder = new Encrypter(self::$enc_key);
+        if (!$string) return array();
+        return $encoder->encrypt($string);
+    }
+
+    /**
+     * To Decrypt the given Crypt data by Secret Key
+     *
+     * @param string $coded_string Encoded Data
+     * @return string Raw Data
+     */
+    public static function decrypt($coded_string)
+    {
+        $decode = new Encrypter(self::$enc_key);
+        if (!$coded_string) return array();
+        return $decode->decrypt($coded_string);
+    }
+
+    /**
+     * For Updating the user status to persist the cart
+     * and make it available for later access.
+     */
+    protected static function updateCartStatus()
+    {
+        /** Get Corresponding User's Cart item meta */
+        $data = self::encrypt(json_encode(self::getItems()));
+
+        if (is_user_logged_in()) {
+
+            /** Attempt to retrieve the User ID */
+            $id = get_current_user_id();
+
+            /** Update Cart data with user's meta */
+            $user = new User();
+            $user = $user->find($id);
+            $user->meta->cart_items = $data;
+            $user->save();
+        }
+
+        /** To Set the Encoded Content to Fresh Cookie */
+        setcookie('cart_items', $data, time() + (3600 * 24 * 2), "/");
     }
 
 }
