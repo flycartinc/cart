@@ -43,8 +43,9 @@ class Cart extends Model
                 $id = get_current_user_id();
 
                 /** Get Corresponding User's Cart item meta */
-                $content = User::find($id)->meta('cart_items')->get()->first();
-
+                $content = User::find($id)->meta()->where('meta_key', 'cart_items')->get()
+                    ->pluck('meta_value', 'meta_key');
+                $content = $content['cart_items'];
                 /** If User Meta have cart data's, then check Cookie */
                 if (!$content) {
 
@@ -56,8 +57,6 @@ class Cart extends Model
                     } else {
                         $content = array();
                     }
-                } else {
-                    $content = json_decode(self::decrypt($content), true);
                 }
 
                 /** CASE 2: User cookie based restore */
