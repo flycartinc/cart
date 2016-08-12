@@ -1,10 +1,13 @@
 <?php
 namespace Flycartinc\Cart;
 
+use Herbert\Framework\Models\Post;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Encryption\Encrypter;
 use Corcel\User;
+use StorePress\Helper\Currency;
+use StorePress\Models\Product;
 
 /**
  * Class Cart
@@ -53,7 +56,7 @@ class Cart extends Model
                     if (isset($_COOKIE['cart_items'])) {
 
                         /** Cookie were stored in Encrypted form in generally */
-                        $content = json_decode(self::decrypt($_COOKIE['cart_items']), true);
+                        $content = $_COOKIE['cart_items'];
                     } else {
                         $content = array();
                     }
@@ -65,10 +68,15 @@ class Cart extends Model
             } else if (!empty($_COOKIE['cart_items'])) {
 
                 /** Get Active Cookie's Cart items */
-                $content = json_decode(self::decrypt($_COOKIE['cart_items']), true);
+                $content = $_COOKIE['cart_items'];
             } else {
 
                 $content = array();
+            }
+
+            /** Restore the Cart to User Session */
+            if (!is_array($content) and !is_object($content) and is_string($content)) {
+                $content = json_decode(self::decrypt($content), true);
             }
 
             /** Decrypt the Cart item and Update Cart Session */
@@ -82,15 +90,38 @@ class Cart extends Model
      * @param bool $isEloquent
      * @return array|Collection|mixed
      */
-    public static function getItems($isEloquent = false)
+    public static function getItems($isEloquent = false, $withProduct = false)
     {
         if (!Session()->has('cart_items')) self::initCart();
-
         $cart_items = Session()->get('cart_items');
         if ($isEloquent) {
             self::$cart_items = new Collection();
             foreach ($cart_items as $item) {
-                self::$cart_items->push(collect($item));
+
+                /** Here, the cart items get filtered to eliminate dummy or wrong items
+                 * (ex. item with empty contents)
+                 */
+                if ($item['quantity'] !== 0 and isset($item['pro_id'])) {
+                    if ($withProduct) {
+                        /** Pin Product Data's with Cart Items */
+                        $product = new Product();
+                        if (is_null(Post::find($item['product_id']))) {
+                            unset($cart_items[$item['row_id']]);
+                            Session()->set('cart_items', $cart_items);
+                        } else {
+                            $product->setProductId($item['product_id']);
+
+                            /** "$product->processProduct(true)" will process both simple and variant products */
+
+                            $item_process = $product->processProduct(true);
+                            if ($item_process !== false) {
+                                $item['product'] = $item_process;
+                                $item['product']->meta = $item['product']->meta->pluck('meta_value', 'meta_key');
+                            }
+                        }
+                    }
+                    self::$cart_items->push(collect($item));
+                }
             }
             return self::$cart_items;
         } else {
@@ -114,6 +145,9 @@ class Cart extends Model
     {
         if (is_array($items) OR is_object($items)) {
             Session()->set('cart_items', $items);
+
+            /** Updating Cart status make sure the Stability  */
+            self::updateCartStatus();
         }
     }
 
@@ -136,9 +170,6 @@ class Cart extends Model
         }
         if (empty($item)) return array();
         self::setItems($cart_items);
-
-        /** Updating Cart status make sure the Stability  */
-        self::updateCartStatus();
     }
 
     /**
@@ -178,7 +209,7 @@ class Cart extends Model
 
         $cart_items = self::getItems(true);
         if (empty($cart_items)) return false;
-        $result = $cart_items->where($field, $value);
+        $result = $cart_items->where($field, $value)->first();
         if ($result and !empty($result)) {
             if ($eloquent) {
                 return (object)$result;
@@ -195,11 +226,9 @@ class Cart extends Model
     public static function getRowID($id)
     {
         if (empty($id)) return false;
-
         $cart_items = self::getItems(true);
         if (empty($cart_items)) return false;
-
-        return $cart_items->where('id', $id)->pluck('row_id');
+        return $cart_items->where('product_id', $id)->pluck('row_id');
     }
 
     /**
@@ -222,17 +251,21 @@ class Cart extends Model
             $id = get_current_user_id();
             update_user_meta($id, 'cart_items', '');
         }
+
+        /** Clear all Session */
+        Session()->remove('currency');
+        Session()->remove('billingAddress');
     }
 
     /**
      * @param $id
      * @return bool
      */
-    public static function removeItem($id)
+    public static function removeItem($row_id)
     {
         $cart_items = self::getItems();
         if (empty($cart_items)) return false;
-        unset($cart_items[$id]);
+        unset($cart_items[$row_id[0]]);
         self::setItems($cart_items);
     }
 
