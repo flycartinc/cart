@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Encryption\Encrypter;
 use Corcel\User;
-use StorePress\Helper\Currency;
 use StorePress\Models\Product;
 
 /**
@@ -15,12 +14,15 @@ use StorePress\Models\Product;
  */
 class Cart extends Model
 {
-
     /**
      * @var array of Cart Items
      */
     protected static $cart_items;
 
+    /**
+     * WARNING: If you change "$enc_key" value frequently,
+     * then existing persisted content not able to restore.
+     */
     protected static $enc_key = '!@#$%^OLKINU1234';
 
     /**
@@ -253,17 +255,23 @@ class Cart extends Model
         }
 
         /** Clear all Session */
+        Session()->remove('initPayment');
         Session()->remove('currency');
         Session()->remove('billingAddress');
     }
 
     /**
-     * @param $id
+     * @param $row_id
      * @return bool
      */
     public static function removeItem($row_id)
     {
+        //If "$row_id" is empty, then return false
+        if (empty($row_id) or !isset($row_id)) return false;
+
         $cart_items = self::getItems();
+
+        //If "$cart_items" is empty, then return false
         if (empty($cart_items)) return false;
         unset($cart_items[$row_id[0]]);
         self::setItems($cart_items);
