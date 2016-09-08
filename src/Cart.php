@@ -104,21 +104,20 @@ class Cart extends Model
                  * (ex. item with empty contents)
                  */
                 if ($item['quantity'] !== 0 and isset($item['pro_id'])) {
+                    /** "$withProduct" is true, then cart items are returned with processed product. */
                     if ($withProduct) {
-                        /** Pin Product Data's with Cart Items */
-                        $product = new Product();
+                        /** Verify the Product Availability. */
+
                         if (is_null(Post::find($item['product_id']))) {
                             unset($cart_items[$item['row_id']]);
                             Session()->set('cart_items', $cart_items);
                         } else {
-                            $product->setProductId($item['product_id']);
+                            $product = Product::init($item['product_id']);
 
-                            /** "$product->processProduct(true)" will process both simple and variant products */
-
-                            $item_process = $product->processProduct(true);
-                            if ($item_process !== false) {
-                                $item['product'] = $item_process;
-                                $item['product']->meta = $item['product']->meta->pluck('meta_value', 'meta_key');
+                            $product->processProduct();
+                            if ($product !== false) {
+                                $item['product'] = $product;
+                                $item['product']->setRelation('meta', $item['product']->meta->pluck('meta_value', 'meta_key'));
                             }
                         }
                     }
@@ -255,9 +254,9 @@ class Cart extends Model
         }
 
         /** Clear all Session */
-        Session()->remove('initPayment');
+        Session()->remove('init_payment');
         Session()->remove('currency');
-        Session()->remove('billingAddress');
+        Session()->remove('billing_address');
     }
 
     /**
@@ -275,6 +274,16 @@ class Cart extends Model
         if (empty($cart_items)) return false;
         unset($cart_items[$row_id[0]]);
         self::setItems($cart_items);
+    }
+
+    public static function removeGuest()
+    {
+        Session()->remove('guest_billing_address');
+        Session()->remove('guest_billing_address_verified');
+        Session()->remove('guest_shipping_address');
+        Session()->remove('guest_shipping_address_verified');
+        Session()->remove('guest');
+        Session()->remove('guestMail');
     }
 
     /**
@@ -338,6 +347,13 @@ class Cart extends Model
 
         /** To Set the Encoded Content to Fresh Cookie */
         setcookie('cart_items', $data, time() + (3600 * 24 * 2), "/");
+    }
+
+    public static function validateCart()
+    {
+        //TODO: Improve this, Perform Availability Checks
+        $items = Session()->get('cart_items');
+        return $items;
     }
 
 }
