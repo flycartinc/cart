@@ -38,52 +38,77 @@ class Cart extends Model
      */
     public static function initCart()
     {
-        if (!Session()->has('cart_items')) {
+        $content = Session()->get('cart_items');
 
-            /** CASE 1: User login based restore */
-            /** Initially verify the User logged in or not */
-            if (is_user_logged_in()) {
+        /** CASE 1: User login based restore */
+        /** Initially verify the User logged in or not */
+        if (is_user_logged_in()) {
+            $content = self::getUserCart();
+        }
 
-                /** Attempt to retrieve the User ID */
-                $id = get_current_user_id();
+        /** Restore the Cart to User Session */
+        if (!is_array($content) and !is_object($content) and is_string($content)) {
+            $content = json_decode(self::decrypt($content), true);
+        }
 
-                /** Get Corresponding User's Cart item meta */
-                $content = User::find($id)->meta()->where('meta_key', 'cart_items')->get()
-                    ->pluck('meta_value', 'meta_key');
-                $content = $content['cart_items'];
-                /** If User Meta have cart data's, then check Cookie */
-                if (!$content) {
+        /** Decrypt the Cart item and Update Cart Session */
+        Session()->set('cart_items', $content);
+    }
 
-                    /** If Cookie Hold cart data's, then restore with that */
-                    if (isset($_COOKIE['cart_items'])) {
+    public static function getUserCart()
+    {
+        /** Attempt to retrieve the User ID */
+        $id = get_current_user_id();
 
-                        /** Cookie were stored in Encrypted form in generally */
-                        $content = $_COOKIE['cart_items'];
-                    } else {
-                        $content = array();
-                    }
-                }
+        /** Get Corresponding User's Cart item meta */
+        $content = User::find($id)->meta()->where('meta_key', 'cart_items')->get()
+            ->pluck('meta_value', 'meta_key');
 
-                /** CASE 2: User cookie based restore */
+        $content = $content['cart_items'];
 
-                /** If Cookie is Not Empty and User Not Logged In */
-            } else if (!empty($_COOKIE['cart_items'])) {
+        /** If User Meta have cart data's, then check Cookie */
+        if (!$content) {
+            /** CASE 2: User cookie based restore */
 
-                /** Get Active Cookie's Cart items */
+            /** If Cookie Hold cart data's, then restore with that */
+            if (isset($_COOKIE['cart_items'])) {
+
+                /** Cookie were stored in Encrypted form in generally */
                 $content = $_COOKIE['cart_items'];
             } else {
-
                 $content = array();
             }
-
-            /** Restore the Cart to User Session */
-            if (!is_array($content) and !is_object($content) and is_string($content)) {
-                $content = json_decode(self::decrypt($content), true);
-            }
-
-            /** Decrypt the Cart item and Update Cart Session */
-            Session()->set('cart_items', $content);
+        } else {
+            /** Here, User's cart content taken from userMeta */
+            self::compareCart($content);
         }
+        return $content;
+    }
+
+    public static function compareCart(&$user_cart)
+    {
+        $cookie_cart = json_decode(self::decrypt($_COOKIE['cart_items']), true);
+        $user_cart = json_decode(self::decrypt($user_cart), true);
+
+        /** If Cookie have no cart item's, then return as no difference. */
+        if (empty($cookie_cart)) return true;
+        $item_list = [];
+        $result = [];
+        foreach ($cookie_cart as $index => $item) {
+            $item_list[$item['product_id']] = $item;
+        }
+
+        foreach ($user_cart as $item) {
+            $item_list[$item['product_id']] = $item;
+        }
+        /** For Re-Assigning the Row_id. */
+        foreach ($item_list as $key => $item) {
+            $result[$item['row_id']] = $item;
+        }
+
+        /** User Cart is taking as primary content. */
+        $user_cart = $result;
+
     }
 
     /**
@@ -94,7 +119,6 @@ class Cart extends Model
      */
     public static function getItems($isEloquent = false, $withProduct = false)
     {
-        if (!Session()->has('cart_items')) self::initCart();
         $cart_items = Session()->get('cart_items');
         if ($isEloquent) {
             self::$cart_items = new Collection();
