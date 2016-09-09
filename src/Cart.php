@@ -38,14 +38,40 @@ class Cart extends Model
      */
     public static function initCart()
     {
+        self::updateSessionWithCookie();
+
         $content = Session()->get('cart_items');
 
         /** CASE 1: User login based restore */
         /** Initially verify the User logged in or not */
         if (is_user_logged_in()) {
-            $content = self::getUserCart();
+            $user_content = self::getUserCart();
+            $content = (!empty($user_content) ? $user_content : $content);
         }
 
+        /** Restore the Cart to User Session */
+        if (!is_array($content) and !is_object($content) and is_string($content)) {
+            $content = json_decode(self::decrypt($content), true);
+        }
+
+        /** Decrypt the Cart item and Update Cart Session */
+        Session()->set('cart_items', $content);
+    }
+
+    public static function updateSessionWithCookie()
+    {
+        /** If User Meta have cart data's, then check Cookie */
+
+        /** CASE 2: User cookie based restore */
+
+        /** If Cookie Hold cart data's, then restore with that */
+        if (isset($_COOKIE['cart_items'])) {
+
+            /** Cookie were stored in Encrypted form in generally */
+            $content = $_COOKIE['cart_items'];
+        } else {
+            $content = array();
+        }
         /** Restore the Cart to User Session */
         if (!is_array($content) and !is_object($content) and is_string($content)) {
             $content = json_decode(self::decrypt($content), true);
@@ -66,19 +92,7 @@ class Cart extends Model
 
         $content = $content['cart_items'];
 
-        /** If User Meta have cart data's, then check Cookie */
-        if (!$content) {
-            /** CASE 2: User cookie based restore */
-
-            /** If Cookie Hold cart data's, then restore with that */
-            if (isset($_COOKIE['cart_items'])) {
-
-                /** Cookie were stored in Encrypted form in generally */
-                $content = $_COOKIE['cart_items'];
-            } else {
-                $content = array();
-            }
-        } else {
+        if ($content) {
             /** Here, User's cart content taken from userMeta */
             self::compareCart($content);
         }
@@ -87,18 +101,29 @@ class Cart extends Model
 
     public static function compareCart(&$user_cart)
     {
-        $cookie_cart = json_decode(self::decrypt($_COOKIE['cart_items']), true);
-        $user_cart = json_decode(self::decrypt($user_cart), true);
+        $session_cart = Session()->get('cart_items');
+
+        if (is_string($user_cart)) {
+            $user_cart = json_decode(self::decrypt($user_cart), true);
+        }
 
         /** If Cookie have no cart item's, then return as no difference. */
-        if (empty($cookie_cart)) return true;
+        if (empty($session_cart)) return true;
         $item_list = [];
         $result = [];
-        foreach ($cookie_cart as $index => $item) {
+        foreach ($session_cart as $index => $item) {
             $item_list[$item['product_id']] = $item;
         }
 
-        foreach ($user_cart as $item) {
+        foreach ($user_cart as $index => $item) {
+            /** If Product Already exist, */
+            if (isset($item_list[$item['product_id']])) {
+                /** If Different Row ID's are different, then these all are consider as two different time product. */
+                if ($item_list[$item['product_id']]['row_id'] != $item['row_id']) {
+                    /** Product's Quantity get summed. */
+                    $item['quantity'] = $item['quantity'] + $item_list[$item['product_id']]['quantity'];
+                }
+            }
             $item_list[$item['product_id']] = $item;
         }
         /** For Re-Assigning the Row_id. */
@@ -120,6 +145,7 @@ class Cart extends Model
     public static function getItems($isEloquent = false, $withProduct = false)
     {
         $cart_items = Session()->get('cart_items');
+
         if ($isEloquent) {
             self::$cart_items = new Collection();
             foreach ($cart_items as $item) {
