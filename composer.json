@@ -1,7 +1,7 @@
 {
   "name": "flycartinc/cart",
   "type": "library",
-  "description": "Complete Cart Library with Session Library",
+  "description": "A simple cart implementation",
   "keywords": ["Cart","Session Cart","Cart Library","Cart Persistence"],
   "license": "MIT",
   "authors": [
