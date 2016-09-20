@@ -88,7 +88,7 @@ class Cart extends Model
 
         /** Get Corresponding User's Cart item meta */
         $content = User::find($id)->meta()->where('meta_key', 'cart_items')->get()
-            ->pluck('meta_value', 'meta_key');
+                       ->pluck('meta_value', 'meta_key');
 
         $content = $content['cart_items'];
 
@@ -147,7 +147,7 @@ class Cart extends Model
         $cart_items = Session()->get('cart_items');
 
         if ($isEloquent) {
-            self::$cart_items = new Collection();
+            self::$cart_items = new CartItem();
             foreach ($cart_items as $item) {
 
                 /** Here, the cart items get filtered to eliminate dummy or wrong items
@@ -171,7 +171,7 @@ class Cart extends Model
                             }
                         }
                     }
-                    self::$cart_items->push(collect($item));
+                    self::$cart_items->push(new CartItem($item));
                 }
             }
             return self::$cart_items;
