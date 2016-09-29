@@ -58,6 +58,9 @@ class Cart extends Model
         Session()->set('cart_items', $content);
     }
 
+    /**
+     *
+     */
     public static function updateSessionWithCookie()
     {
         /** If User Meta have cart data's, then check Cookie */
@@ -81,6 +84,9 @@ class Cart extends Model
         Session()->set('cart_items', $content);
     }
 
+    /**
+     * @return mixed
+     */
     public static function getUserCart()
     {
         /** Attempt to retrieve the User ID */
@@ -88,7 +94,7 @@ class Cart extends Model
 
         /** Get Corresponding User's Cart item meta */
         $content = User::find($id)->meta()->where('meta_key', 'cart_items')->get()
-                       ->pluck('meta_value', 'meta_key');
+            ->pluck('meta_value', 'meta_key');
 
         $content = $content['cart_items'];
 
@@ -99,6 +105,10 @@ class Cart extends Model
         return $content;
     }
 
+    /**
+     * @param $user_cart
+     * @return bool
+     */
     public static function compareCart(&$user_cart)
     {
         $session_cart = Session()->get('cart_items');
@@ -208,19 +218,24 @@ class Cart extends Model
      */
     public static function add($item, $isCart = false)
     {
-        $item['row_id'] = hash('md5', $item['pro_id'] . '_' . $item['var_id']);
-        $cart_items = self::getItems();
-        if (!empty($cart_items) and self::checkIsExist($item)) {
-            if (!$isCart) {
-                $cart_items[$item['row_id']]['quantity'] = self::updateStock($item['row_id'], $item['quantity']);
+        if (Cart::verifyStock($item['product_id'], $item['quantity'])) {
+            $item['row_id'] = hash('md5', $item['product_id'] . '_' . $item['var_id']);
+            $cart_items = self::getItems();
+            if (!empty($cart_items) and self::checkIsExist($item)) {
+                if (!$isCart) {
+                    $cart_items[$item['row_id']]['quantity'] = self::updateStock($item['row_id'], $item['quantity']);
+                } else {
+                    $cart_items[$item['row_id']] = $item;
+                }
             } else {
                 $cart_items[$item['row_id']] = $item;
             }
+            if (empty($item)) return array();
+            self::setItems($cart_items);
+            return true;
         } else {
-            $cart_items[$item['row_id']] = $item;
+            return false;
         }
-        if (empty($item)) return array();
-        self::setItems($cart_items);
     }
 
     /**
@@ -326,6 +341,9 @@ class Cart extends Model
         self::setItems($cart_items);
     }
 
+    /**
+     *
+     */
     public static function removeGuest()
     {
         Session()->remove('guest_billing_address');
@@ -399,11 +417,42 @@ class Cart extends Model
         setcookie('cart_items', $data, time() + (3600 * 24 * 2), "/");
     }
 
+    /**
+     * @return mixed
+     */
     public static function validateCart()
     {
         //TODO: Improve this, Perform Availability Checks
         $items = Session()->get('cart_items');
         return $items;
+    }
+
+    /**
+     * To Verify the stock to make reliable product management.
+     * @param $pro_id
+     * @param $quantity
+     * @return bool
+     */
+    public static function verifyStock($pro_id, $quantity)
+    {
+        $product = Product::init($pro_id);
+        $product->processProduct();
+        $stock = $product->meta->stock;
+        $status = false;
+        $quantity = (int)$quantity;
+        //Verify Overall Stock Restriction
+        if ((int)$stock->qty > $quantity) {
+            //Verify Max Sale Restriction
+            if ((int)$stock->min <= $quantity) {
+                //Verify Min Sale Restriction
+                if ((int)$stock->max >= $quantity) {
+                    $status = true;
+                }
+
+            }
+
+        }
+        return $status;
     }
 
 }
