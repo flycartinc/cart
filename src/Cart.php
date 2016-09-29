@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Encryption\Encrypter;
 use Corcel\User;
-use StorePress\Models\Product;
+use CartRabbit\Models\Product;
 
 /**
  * Class Cart
- * @package StorePress\library
+ * @package CartRabbit\library
  */
 class Cart extends Model
 {
