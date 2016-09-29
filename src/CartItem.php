@@ -4,9 +4,9 @@ namespace Flycartinc\Cart;
 
 
 use Illuminate\Support\Collection;
-use StorePress\Models\Product;
-use StorePress\Models\ProductBase;
-use StorePress\Models\ProductInterface;
+use CartRabbit\Models\Product;
+use CartRabbit\Models\ProductBase;
+use CartRabbit\Models\ProductInterface;
 
 class CartItem extends Collection implements CartItemInterface {
 
