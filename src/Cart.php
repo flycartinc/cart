@@ -53,9 +53,25 @@ class Cart extends Model
         if (!is_array($content) and !is_object($content) and is_string($content)) {
             $content = json_decode(self::decrypt($content), true);
         }
+        /** Verify the Existence of a product. */
+        self::verifyProducts($content);
 
         /** Decrypt the Cart item and Update Cart Session */
         Session()->set('cart_items', $content);
+    }
+
+    /**
+     * To Verify the Existence of Product.
+     *
+     * @param $content
+     */
+    public static function verifyProducts(&$content)
+    {
+        foreach ($content as $index => $product) {
+            if (is_null(Product::init(array_get($product, 'product_id', 0)))) {
+                unset($content[$index]);
+            }
+        }
     }
 
     /**
@@ -347,9 +363,9 @@ class Cart extends Model
     public static function removeGuest()
     {
         Session()->remove('guest_billing_address');
-        Session()->remove('guest_billing_address_verified');
+//        Session()->remove('guest_billing_address_verified');
         Session()->remove('guest_shipping_address');
-        Session()->remove('guest_shipping_address_verified');
+//        Session()->remove('guest_shipping_address_verified');
         Session()->remove('guest');
         Session()->remove('guestMail');
     }
