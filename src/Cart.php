@@ -112,8 +112,9 @@ class Cart extends Model
         $content = User::find($id)->meta()->where('meta_key', 'cart_items')->get()
             ->pluck('meta_value', 'meta_key');
 
-        $content = $content['cart_items'];
-
+        if (isset($content['cart_items'])) {
+            $content = $content['cart_items'];
+        }
         if ($content) {
             /** Here, User's cart content taken from userMeta */
             self::compareCart($content);
